@@ -644,7 +644,7 @@ async function getChangedFiles(token, base, ref, initialFetchDepth) {
             const baseSha = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.sha;
             const defaultBranch = (_b = github.context.payload.repository) === null || _b === void 0 ? void 0 : _b.default_branch;
             const currentRef = await git.getCurrentRef();
-            return await git.getChanges(base || baseSha || defaultBranch, currentRef);
+            return await git.getChangesSinceMergeBase(base || baseSha || defaultBranch, currentRef, initialFetchDepth);
         }
         // To keep backward compatibility, manual inputs take precedence over
         // commits in GitHub merge queue event.

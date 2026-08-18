@@ -182,6 +182,24 @@ export async function getCurrentRef(): Promise<string> {
   }
 }
 
+export async function getCommitSha(ref: string): Promise<string> {
+  const availableRef = await ensureRefAvailable(ref)
+  return (await getExecOutput('git', ['rev-parse', `${availableRef}^{commit}`])).stdout.trim()
+}
+
+export async function getCommitParents(ref: string): Promise<string[]> {
+  const availableRef = await ensureRefAvailable(ref)
+  const commit = (await getExecOutput('git', ['cat-file', 'commit', availableRef], {silent: true})).stdout
+  return parseGitCommitParents(commit)
+}
+
+export function parseGitCommitParents(commit: string): string[] {
+  const lines = commit.split(/\r?\n/)
+  const headerEnd = lines.indexOf('')
+  const headers = headerEnd === -1 ? lines : lines.slice(0, headerEnd)
+  return headers.filter(line => line.startsWith('parent ')).map(line => line.slice('parent '.length))
+}
+
 export function getShortName(ref: string): string {
   if (!ref) return ''
 

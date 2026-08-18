@@ -204,7 +204,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGitSha = exports.getShortName = exports.getCurrentRef = exports.listAllFilesAsAdded = exports.parseGitDiffOutput = exports.getChangesSinceMergeBase = exports.getChangesOnHead = exports.getChanges = exports.getChangesInLastCommit = exports.HEAD = exports.NULL_SHA = void 0;
+exports.isGitSha = exports.getShortName = exports.parseGitCommitParents = exports.getCommitParents = exports.getCommitSha = exports.getCurrentRef = exports.listAllFilesAsAdded = exports.parseGitDiffOutput = exports.getChangesSinceMergeBase = exports.getChangesOnHead = exports.getChanges = exports.getChangesInLastCommit = exports.HEAD = exports.NULL_SHA = void 0;
 const exec_1 = __nccwpck_require__(1514);
 const core = __importStar(__nccwpck_require__(2186));
 const file_1 = __nccwpck_require__(4014);
@@ -378,6 +378,24 @@ async function getCurrentRef() {
     }
 }
 exports.getCurrentRef = getCurrentRef;
+async function getCommitSha(ref) {
+    const availableRef = await ensureRefAvailable(ref);
+    return (await (0, exec_1.getExecOutput)('git', ['rev-parse', `${availableRef}^{commit}`])).stdout.trim();
+}
+exports.getCommitSha = getCommitSha;
+async function getCommitParents(ref) {
+    const availableRef = await ensureRefAvailable(ref);
+    const commit = (await (0, exec_1.getExecOutput)('git', ['cat-file', 'commit', availableRef], { silent: true })).stdout;
+    return parseGitCommitParents(commit);
+}
+exports.getCommitParents = getCommitParents;
+function parseGitCommitParents(commit) {
+    const lines = commit.split(/\r?\n/);
+    const headerEnd = lines.indexOf('');
+    const headers = headerEnd === -1 ? lines : lines.slice(0, headerEnd);
+    return headers.filter(line => line.startsWith('parent ')).map(line => line.slice('parent '.length));
+}
+exports.parseGitCommitParents = parseGitCommitParents;
 function getShortName(ref) {
     if (!ref)
         return '';
@@ -644,6 +662,15 @@ async function getChangedFiles(token, base, ref, initialFetchDepth) {
             const baseSha = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.sha;
             const defaultBranch = (_b = github.context.payload.repository) === null || _b === void 0 ? void 0 : _b.default_branch;
             const currentRef = await git.getCurrentRef();
+            const currentSha = await git.getCommitSha(currentRef);
+            if (currentSha === github.context.sha) {
+                const parents = await git.getCommitParents(currentSha);
+                if (parents.length >= 2) {
+                    core.info(`Temporary merge commit detected - comparing with target branch parent ${parents[0]}`);
+                    return await git.getChanges(parents[0], currentSha);
+                }
+                core.warning(`Event commit ${currentSha} is not a merge commit - falling back to merge-base detection`);
+            }
             return await git.getChangesSinceMergeBase(base || baseSha || defaultBranch, currentRef, initialFetchDepth);
         }
         // To keep backward compatibility, manual inputs take precedence over

@@ -111,6 +111,15 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
       const baseSha = github.context.payload.pull_request?.base.sha
       const defaultBranch = github.context.payload.repository?.default_branch
       const currentRef = await git.getCurrentRef()
+      const currentSha = await git.getCommitSha(currentRef)
+      if (currentSha === github.context.sha) {
+        const parents = await git.getCommitParents(currentSha)
+        if (parents.length >= 2) {
+          core.info(`Temporary merge commit detected - comparing with target branch parent ${parents[0]}`)
+          return await git.getChanges(parents[0], currentSha)
+        }
+        core.warning(`Event commit ${currentSha} is not a merge commit - falling back to merge-base detection`)
+      }
       return await git.getChangesSinceMergeBase(base || baseSha || defaultBranch, currentRef, initialFetchDepth)
     }
     // To keep backward compatibility, manual inputs take precedence over

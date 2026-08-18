@@ -21,6 +21,9 @@ don't allow this because they don't work on a level of individual jobs or steps.
   - Changes are detected against the pull request base branch
   - Uses GitHub REST API to fetch a list of modified files
   - Requires [pull-requests: read](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs) permission
+  - When `token` is empty and GitHub's temporary merge commit is checked out, changes are detected against
+    its target-branch parent. This detects exactly what merging the pull request would change, including for
+    stacked pull requests. If another ref is checked out, changes are detected against its merge-base.
 - **Feature branches:**
   - Workflow triggered by **[push](https://docs.github.com/en/actions/reference/events-that-trigger-workflows#push)**
   or any other **[event](https://docs.github.com/en/free-pro-team@latest/actions/reference/events-that-trigger-workflows)**

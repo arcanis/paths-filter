@@ -17,6 +17,19 @@ describe('parsing output of the git diff command', () => {
 })
 
 describe('git utility function tests (those not invoking git)', () => {
+  test('parseGitCommitParents returns parents from commit headers only', () => {
+    const parents = git.parseGitCommitParents(
+      'tree aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' +
+        'parent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n' +
+        'parent cccccccccccccccccccccccccccccccccccccccc\n' +
+        'author Example <example@example.com> 0 +0000\n' +
+        '\n' +
+        'parent dddddddddddddddddddddddddddddddddddddddd is only commit message text\n'
+    )
+
+    expect(parents).toEqual(['bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'cccccccccccccccccccccccccccccccccccccccc'])
+  })
+
   test('Trims "refs/" and "heads/" from ref', () => {
     expect(git.getShortName('refs/heads/master')).toBe('master')
     expect(git.getShortName('heads/master')).toBe('heads/master')
